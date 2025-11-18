@@ -1,0 +1,10 @@
+.status {
+    font-size: 1.7rem;
+    font-weight: bold;
+    text-align: center;
+    background-color: var(--section-background);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    border: 2px solid var(--foreground);
+}

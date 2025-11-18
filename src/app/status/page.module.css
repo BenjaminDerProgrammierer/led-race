@@ -1,0 +1,43 @@
+.container {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.section {
+    width: 70%;
+    margin-top: 20px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+
+    background-color: var(--section-background);
+    border-radius: 8px;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.4);
+}
+
+.subtitle {
+    width: 100%;
+    text-align: left;
+}
+
+.timestamp {
+    color: var(--timestamp-color);
+    font-size: 0.9em;
+    text-align: right;
+    width: 100%;
+}
+
+.data {
+    background-color: var(--data-background);
+    color: var(--data-foreground);
+    padding: 15px;
+    border-radius: 5px;
+    overflow-x: auto;
+    font-size: 1.3em;
+    width: 100%;
+}

@@ -1,95 +1,71 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import fs from 'node:fs'
+import path from 'node:path'
+import Link from 'next/link'
 
-export default function Home() {
+export default async function HomePage() {
+  let routes: string[];
+
+  try {
+    routes = await collectRoutes(path.join(process.cwd(), 'src', 'app'))
+  } catch (err) {
+    // If reading fails, warn and fall back to root only
+    console.warn('Failed to collect routes from src/app:', err)
+    routes = ['/']
+  }
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
+    <main style={{ padding: 24 }}>
+      <h1>MQTT Open LED Race - All pages</h1>
+      <ul>
+        {routes.map((r) => (
+          <li key={r}>
+            <Link href={r} style={{ textDecoration: 'none', color: 'inherit' }}>{r}</Link>
           </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+        ))}
+      </ul>
+    </main>
+  )
+}
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+/**
+ * Recursively collect all routes from the given directory
+ * @param dir Directory to scan
+ * @param segments Current path segments
+ * @returns Array of route paths
+ */
+async function collectRoutes(dir: string, segments: string[] = []) {
+  const PAGE_FILE_RE = /^page\.(tsx|ts|jsx|js|mdx)$/i
+  const entries = await fs.promises.readdir(dir, { withFileTypes: true })
+  const routes = new Set<string>()
+
+  for (const entry of entries) {
+    const name = entry.name
+
+    if (name.startsWith('.')) continue
+
+    const fullPath = path.join(dir, name)
+
+    if (entry.isFile() && (PAGE_FILE_RE.test(name))) {
+      // handle edge case where segments are <...>/[id]/page.tsx (or similar)
+      for (let i = 0; i < segments.length; i++) {
+        if (segments[i].startsWith('[') && segments[i].endsWith(']')) {
+          // replace with :id
+          segments[i] = ':' + segments[i].slice(1, -1)
+        }
+      }
+      const url = '/' + segments.filter(Boolean).join('/')
+      routes.add(url || '/')
+      continue
+    }
+
+    if (!entry.isDirectory()) continue
+
+    const isGroup = name.startsWith('(')
+    const newSegments = isGroup ? segments : [...segments, name]
+
+    const childRoutes = await collectRoutes(fullPath, newSegments)
+    for (const r of childRoutes) routes.add(r)
+  }
+
+  return Array.from(routes).sort((a, b) => a.localeCompare(b))
 }
