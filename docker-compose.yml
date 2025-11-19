@@ -1,6 +1,6 @@
 services:
   nextjs:
-    image: ghcr.io/${GITHUB_REPOSITORY:-led-race}:${IMAGE_TAG:-latest}
+    image: ghcr.io/benjaminderprogrammierer/led-race:main
     build:
       context: .
       dockerfile: Dockerfile
@@ -22,7 +22,7 @@ services:
       - "3000"
 
   nginx:
-    image: ghcr.io/${GITHUB_REPOSITORY:-led-race}-nginx:${IMAGE_TAG:-latest}
+    image: ghcr.io/benjaminderprogrammierer/led-race-nginx:main
     build:
       context: ./nginx
       dockerfile: Dockerfile
