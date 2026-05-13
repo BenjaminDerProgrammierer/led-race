@@ -3,34 +3,19 @@ import mqtt, { MqttClient } from "mqtt";
 /**
  * Data structure representing the running state of the race (MQTT topic: Open_LED_Race/RaceRunning)
  */
-export interface RaceRunning {
-    P1_Time_ms: number,
-    P2_Time_ms: number,
-    P3_Time_ms: number,
-    P1_Steps: number,
-    P2_Steps: number,
-    P3_Steps: number
-}
-
-/**
- * Data structure representing the full LED race data from the MQTT broker
- */
-export interface LEDRaceData {
-    WiFiStatus: string;
-    Error_Message: string;
-    WiFi_SSID: string;
-    WiFi_IP: string;
-    WiFi_mac: string;
-    RaceStatus: RunningState;
-    RaceRunning: RaceRunning;
+export interface RaceData {
+    time: number,
+    pos1: number,
+    pos2: number,
+    pos3: number
 }
 
 /**
  * Data structure representing a smaller subset of the full LED race data used for live updates
  */
-export interface SmallLEDRaceData {
-    RaceStatus: RunningState;
-    RaceRunning: RaceRunning;
+export interface LEDRaceData {
+    raceStatus: GameState;
+    raceData: RaceData;
 }
 
 /**
@@ -47,14 +32,9 @@ export interface PlayerData {
 export type PlayerState = "wait" | "run" | "runSlow" | "runFast";
 
 /**
- * Type representing the running state of the race
+ * Type representing the state of the race
  */
-export type RunningState = "idle" | "prepareForStart" | "run" | "finish";
-
-/**
- * Original race state strings from the MQTT broker
- */
-type OriginalRaceState = "Stopped" | "Prepare4Race" | "Running" | "Finish";
+export type GameState = "Stopped" | "Countdown" | "Running" | "Finished";
 
 /**
  * Create and return an MQTT client using environment variables MQTT_BROKER_URL, MQTT_USERNAME, MQTT_PASSWORD
@@ -88,13 +68,8 @@ export function getRaceData(client: MqttClient): Promise<LEDRaceData> {
 
         // Subscribe to relevant topics, retained messages will be sent immediately -> we get the current state in a few ms
         client.on("connect", () => {
-            client.subscribe("Open_LED_Race/WiFiStatus");
-            client.subscribe("Open_LED_Race/Error_Message");
-            client.subscribe("Open_LED_Race/WiFi_SSID");
-            client.subscribe("Open_LED_Race/WiFi_IP");
-            client.subscribe("Open_LED_Race/WiFi_mac");
-            client.subscribe("Open_LED_Race/RaceStatus");
-            client.subscribe("Open_LED_Race/RaceRunning");
+            client.subscribe("Open_LED_Race/raceStatus");
+            client.subscribe("Open_LED_Race/raceData");
         });
 
         client.on("message", (topic, message) => {
@@ -102,31 +77,16 @@ export function getRaceData(client: MqttClient): Promise<LEDRaceData> {
             const msgString = message.toString();
 
             switch (topic) {
-                case "Open_LED_Race/WiFiStatus":
-                    raceData.WiFiStatus = msgString;
+                case "Open_LED_Race/raceStatus":
+                    raceData.raceStatus = msgString as GameState;
                     break;
-                case "Open_LED_Race/Error_Message":
-                    raceData.Error_Message = msgString;
-                    break;
-                case "Open_LED_Race/WiFi_SSID":
-                    raceData.WiFi_SSID = msgString;
-                    break;
-                case "Open_LED_Race/WiFi_IP":
-                    raceData.WiFi_IP = msgString;
-                    break;
-                case "Open_LED_Race/WiFi_mac":
-                    raceData.WiFi_mac = msgString;
-                    break;
-                case "Open_LED_Race/RaceStatus":
-                    raceData.RaceStatus = parseRaceStatus(msgString as OriginalRaceState);
-                    break;
-                case "Open_LED_Race/RaceRunning":
-                    raceData.RaceRunning = JSON.parse(msgString);
+                case "Open_LED_Race/raceData":
+                    raceData.raceData = JSON.parse(msgString);
                     break;
             }
 
             // Once we have all data, resolve the promise
-            if (raceData.WiFiStatus && raceData.Error_Message && raceData.WiFi_SSID && raceData.WiFi_IP && raceData.WiFi_mac && raceData.RaceStatus && raceData.RaceRunning) {
+            if (raceData.raceStatus && raceData.raceData) {
                 resolve(raceData as LEDRaceData);
                 client.end();
             }
@@ -145,47 +105,29 @@ export function getRaceData(client: MqttClient): Promise<LEDRaceData> {
  * @param client MQTT client
  * @param callback Callback to invoke on new data
  */
-export function subscribeToRaceStatus(client: MqttClient, callback: (data: SmallLEDRaceData) => void) {
-    const raceData: Partial<SmallLEDRaceData> = {};
+export function subscribeToRaceStatus(client: MqttClient, callback: (data: LEDRaceData) => void) {
+    const raceData: Partial<LEDRaceData> = {};
 
     client.on("connect", () => {
-        client.subscribe("Open_LED_Race/RaceStatus");
-        client.subscribe("Open_LED_Race/RaceRunning");
+        client.subscribe("Open_LED_Race/raceStatus");
+        client.subscribe("Open_LED_Race/raceData");
     });
 
     client.on("message", (topic, message) => {
         const msgString = message.toString();
 
         switch (topic) {
-            case "Open_LED_Race/RaceStatus":
-                raceData.RaceStatus = parseRaceStatus(msgString as OriginalRaceState);
+            case "Open_LED_Race/raceStatus":
+                raceData.raceStatus = msgString as GameState;
                 break;
-            case "Open_LED_Race/RaceRunning":
-                raceData.RaceRunning = JSON.parse(msgString);
+            case "Open_LED_Race/raceData":
+                raceData.raceData = JSON.parse(msgString);
                 break;
         }
 
         // Once we have both RaceStatus and RaceRunning, invoke the callback
-        if (raceData.RaceStatus && raceData.RaceRunning) {
-            callback(raceData as SmallLEDRaceData);
+        if (raceData.raceStatus && raceData.raceData) {
+            callback(raceData as LEDRaceData);
         }
     });
-}
-
-/**
- * Parse race status string to RunningState
- * @param status Input string
- * @returns Corresponding RunningState
- */
-function parseRaceStatus(status: OriginalRaceState): RunningState {
-    switch (status) {
-        case "Stopped":
-            return "idle";
-        case "Prepare4Race":
-            return "prepareForStart";
-        case "Running":
-            return "run";
-        case "Finish":
-            return "finish";
-    }
 }

@@ -28,6 +28,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Led Race" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <img src="/logo.png" alt="Logo" id="logo" />
         {children}
       </body>
     </html>

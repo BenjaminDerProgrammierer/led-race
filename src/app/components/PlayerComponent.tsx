@@ -3,12 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import styles from './PlayerComponent.module.css';
 
-import { PlayerData, RunningState, PlayerState, SmallLEDRaceData } from "@/lib/mqtt";
+import { PlayerData, GameState, PlayerState, LEDRaceData } from "@/lib/mqtt";
 
 export default function PlayerComponent({ playerId }: Readonly<{ playerId: number }>) {
     const [currentPlayerData, setCurrentPlayerData] = useState<PlayerData | null>(null);
     const [lastUpdate, setLastUpdate] = useState(null as Date | null);
-    const [runningState, setRunningState] = useState<RunningState | null>(null);
+    const [runningState, setRunningState] = useState<GameState | null>(null);
     const [playerState, setPlayerState] = useState<PlayerState | null>(null);
     const [imageSrc, setImageSrc] = useState<string | null>(null);
 
@@ -26,30 +26,26 @@ export default function PlayerComponent({ playerId }: Readonly<{ playerId: numbe
 
                 es.onmessage = (ev) => {
                     try {
-                        const parsed = JSON.parse(ev.data) as SmallLEDRaceData;
+                        const parsed = JSON.parse(ev.data) as LEDRaceData;
 
                         // Set running state
-                        setRunningState(parsed.RaceStatus);
+                        setRunningState(parsed.raceStatus);
 
                         // Set player data for this player
-                        let time;
+                        let time = parsed.raceData.time;
                         let score;
 
                         switch (playerId) {
                             case 1:
-                                time = parsed.RaceRunning.P1_Time_ms;
-                                score = parsed.RaceRunning.P1_Steps;
+                                score = parsed.raceData.pos1;
                                 break;
                             case 2:
-                                time = parsed.RaceRunning.P2_Time_ms;
-                                score = parsed.RaceRunning.P2_Steps;
+                                score = parsed.raceData.pos2;
                                 break;
                             case 3:
-                                time = parsed.RaceRunning.P3_Time_ms;
-                                score = parsed.RaceRunning.P3_Steps;
+                                score = parsed.raceData.pos3;
                                 break;
                             default:
-                                time = null;
                                 score = null;
                                 break;
                         }
@@ -122,13 +118,13 @@ export default function PlayerComponent({ playerId }: Readonly<{ playerId: numbe
 
     useEffect(() => {
         switch (runningState) {
-            case "idle":
+            case "Stopped":
                 setImageSrc("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExazFmcW5qaHppdzN5dThyaXI0Mnk0enl0dmE4ZmJtcWRkZnEzMmN5biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1yT902UqU5fcFxjLbH/giphy.gif")
                 break;
-            case "prepareForStart":
+            case "Countdown":
                 setImageSrc("https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExc3RqNmV6NDYwbXVmMG9lbGlkcXEwN3FrbzYyanpncG9lb20wdjR3ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QJvwBSGaoc4eI/giphy.gif")
                 break;
-            case "run":
+            case "Running":
                 switch (playerState) {
                     case "run":
                         setImageSrc("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExcnV0dGM1NDRha3htcmJ1aHR5bzd3MDF4bzB3czJ4YWF0ZWZ6ZDFtZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5UDsrMd6ctz6KDXyIo/giphy.gif")
@@ -143,17 +139,20 @@ export default function PlayerComponent({ playerId }: Readonly<{ playerId: numbe
                         setImageSrc("https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcG80M2V6Y3lzNGFxa3V4d2VqOG9jNDY1ejMzMnFncHB5YmtnbWwyNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tXL4FHPSnVJ0A/giphy.gif");
                         break;
                     default:
-                        setImageSrc(null);
+                        setImageSrc("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExazFmcW5qaHppdzN5dThyaXI0Mnk0enl0dmE4ZmJtcWRkZnEzMmN5biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1yT902UqU5fcFxjLbH/giphy.gif")
                 }
                 break;
-            case "finish":
-                if (currentPlayerData && currentPlayerData.score >= 290) {
+            case "Finished":
+                if (currentPlayerData && currentPlayerData.score >= 280) {
                     setImageSrc("https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdGs4dzhubmh5c3JuNGx5cWR1eG1wbGF5Ymt6aGJiYmZvbHJ4cmh1YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/VQ77RNKX0nyaA/giphy.gif");
                     break;
                 } else {
                     setImageSrc("https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZmJ4YXFtYTN4NmVkcmpobXczcTc0MTc1a2U3bzZlZWRxb3o3ZTB4MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/hiGVaAnMnrqjGujxOj/giphy.gif");
                 }
                 break;
+            default:
+                setImageSrc("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExazFmcW5qaHppdzN5dThyaXI0Mnk0enl0dmE4ZmJtcWRkZnEzMmN5biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1yT902UqU5fcFxjLbH/giphy.gif")
+
         }
     }, [runningState, playerState, currentPlayerData]);
 

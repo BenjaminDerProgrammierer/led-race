@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { CurrentDataResponse } from "@/app/api/get-current-data/route";
 
 import styles from './page.module.css';
+// @ts-ignore
 import SyntaxHighlighter from "react-syntax-highlighter/dist/cjs/prism";
+// @ts-ignore
 import { twilight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 export default function StatusPage() {

@@ -5,7 +5,7 @@ import styles from './page.module.css';
 export default function PlayerPage() {
     return (
         <main className={styles.container}>
-            <h1 className={styles.title}>Overview Page</h1>
+            <h1 className={styles.title}>Open LED Race</h1>
             <GameStatusComponent />
 
             {/* Loop through player IDs 1 to 3 */}

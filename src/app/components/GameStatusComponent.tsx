@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import styles from './GameStatusComponent.module.css';
 
-import { SmallLEDRaceData } from "@/lib/mqtt";
+import { LEDRaceData } from "@/lib/mqtt";
 
 export default function GameStatusComponent() {
     const [lastUpdate, setLastUpdate] = useState(null as Date | null);
@@ -23,26 +23,26 @@ export default function GameStatusComponent() {
 
                 es.onmessage = (ev) => {
                     try {
-                        const parsed = JSON.parse(ev.data) as SmallLEDRaceData;
+                        const parsed = JSON.parse(ev.data) as LEDRaceData;
 
                         // Set running state
                         let state: string = "";
-                        switch (parsed.RaceStatus) {
-                            case "idle":
+                        switch (parsed.raceStatus) {
+                            case "Stopped":
                                 state = "Game Stopped";
                                 break;
-                            case "prepareForStart":
+                            case "Countdown":
                                 state = "Prepare for Start!";
                                 break;
-                            case "run":
+                            case "Running":
                                 state = "Race in Progress...";
                                 break;
-                            case "finish":
+                            case "Finished":
                                 state = "Race Finished!";
                                 break;
                         }
                         setRunningState(state);
-                        setRunningTime(parsed.RaceRunning.P1_Time_ms); // just show P1 time as reference
+                        setRunningTime(parsed.raceData.time);
                         setLastUpdate(new Date());
 
                         // reset reconnect backoff
